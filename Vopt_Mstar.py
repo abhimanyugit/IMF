@@ -119,7 +119,7 @@ class Galaxy(object):
             return 10.0**(self.fj_y0+self.fj_alpha*(self.xmstel-self.fj_x0)+self.fj_beta*log10(0.5+0.5*(10**self.xmstel/10**self.fj_x0)))
         else:
             print "Faber Jackson relation should not be used for late types"
-
+    
     def getVc_re(self):
         if(self.galtype=="LT"):
             return getTFvelocity(self);
@@ -146,33 +146,33 @@ class Galaxy(object):
            
     def getSMHM(self,xmstel):
 
-       SMred=[]
-       HMred=[]
-       SMblue=[]
-       HMblue=[]
-       with open("SMHM_red.txt",'r') as redfile:
-           next(redfile) #to skip headings
-           reader = csv.reader(redfile,delimiter='\t')
-           for SM,HM in reader:
+        SMred=[]
+        HMred=[]
+        SMblue=[]
+        HMblue=[]
+        with open("SMHM_red.txt",'r') as redfile:
+            next(redfile) #to skip headings
+            reader = csv.reader(redfile,delimiter='\t')
+            for SM,HM in reader:
                SMred.append(float(SM))
                HMred.append(float(HM))
                #print SMred 
                #print HMred
        
-       with open("SMHM_blue.txt",'r') as bluefile:
-		 next(bluefile) #to skip headings
-		 reader = csv.reader(bluefile,delimiter='\t')
-		 for SM,HM in reader:
-		     SMblue.append(float(SM))
-		     HMblue.append(float(HM))
-		#print SMblue
-		#print HMblue	
-       if(self.galtype=="LT"):
-           return interpolateSMHM(xmstel,SMblue,HMblue)
-       elif(self.galtype=="ET"):
-		return interpolateSMHM(xmstel,SMred,HMred) 
+        with open("SMHM_blue.txt",'r') as bluefile:
+            next(bluefile) #to skip headings
+            reader = csv.reader(bluefile,delimiter='\t')
+            for SM,HM in reader:
+                SMblue.append(float(SM))
+                HMblue.append(float(HM))
+                #print SMblue
+                #print HMblue 
+        if(self.galtype=="LT"):
+            return interpolateSMHM(xmstel,SMblue,HMblue)
+        elif(self.galtype=="ET"):
+            return interpolateSMHM(xmstel,SMred,HMred) 
 #----------------------------------------------------------------------------------
-           
+
 #----------------------------------------------------------------------------------    
 
     
@@ -194,10 +194,30 @@ if __name__ == "__main__":
     output=""
     f=open("SMHM.txt",'w')
     for i in range (0,141):
-        galaxy_list=Galaxy("ET",xstelmass[i]);
+        galaxy_list1=Galaxy("ET",xstelmass[i]);
         galaxy_list2=Galaxy("LT",xstelmass[i]);
     #sigma_list=galaxy_list.getFJsigma();
         print xstelmass2[i],"\t",galaxy_list2.getSMHM(xstelmass[i])
-        output= str(xstelmass[i])+"\t"+str(galaxy_list.getSMHM(xstelmass[i]))+"\t"+str(xstelmass2[i])+"\t"+str(galaxy_list2.getSMHM(xstelmass2[i]))+"\n"
+        output= str(xstelmass[i])+"\t"+str(galaxy_list1.getSMHM(xstelmass[i]))+"\t"+str(xstelmass2[i])+"\t"+str(galaxy_list2.getSMHM(xstelmass2[i]))+"\n"
         f.write(output)
     f.close()
+
+
+    xms=np.arange(9,12,0.1)
+    galaxy_list=Galaxy("ET",xms)
+    ax=subplot(111)     #subplot(abc) creates axb grid and c is the index of the plot
+    ax.set_xlim([9,12])
+    ax.set_ylim([1.5,2.8]);
+    set_locators(ax,0.5,0.1,0.2,0.02)
+    ax.set_xlabel("log_10 $M_* (M_\odot)$");
+    ax.set_ylabel("$log_{10}$ ($\sigma_{e}$ [km/s])");
+    ax.plot(galaxy_list.xmstel,np.log10(galaxy_list.getFJsigma()),label="FJ");
+    #ax.plot(galaxy_list.xmstel,galaxy_list.getGallazi(),label="Gallazi");
+    legend(fontsize=6,ncol=2);
+    
+    #ax=subplot(222)
+    #ax.autoscale(enable=True, axis='both', tight=None)
+    #ax.plot(YY_d,XX_d)    
+    
+    tight_layout();
+    savefig("FJ.pdf")
