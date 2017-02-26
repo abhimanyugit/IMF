@@ -188,15 +188,13 @@ def set_locators(ax,xmaj,xmin,ymaj=0,ymin=0):
            
 if __name__ == "__main__":
     xstelmass=np.arange(10.28,11.68,0.01);
-    #xstelmass=[10.99,11.1];
-    #galtype=["ET"];
     xstelmass2=np.arange(10.28,11.68,0.01)
     output=""
     f=open("SMHM.txt",'w')
     for i in range (0,141):
         galaxy_list1=Galaxy("ET",xstelmass[i]);
         galaxy_list2=Galaxy("LT",xstelmass[i]);
-    #sigma_list=galaxy_list.getFJsigma();
+        #sigma_list=galaxy_list.getFJsigma();
         print xstelmass2[i],"\t",galaxy_list2.getSMHM(xstelmass[i])
         output= str(xstelmass[i])+"\t"+str(galaxy_list1.getSMHM(xstelmass[i]))+"\t"+str(xstelmass2[i])+"\t"+str(galaxy_list2.getSMHM(xstelmass2[i]))+"\n"
         f.write(output)
@@ -206,11 +204,12 @@ if __name__ == "__main__":
     xms=np.arange(9,12,0.1)
     galaxy_list=Galaxy("ET",xms)
     ax=subplot(111)     #subplot(abc) creates axb grid and c is the index of the plot
-    ax.set_xlim([9,12])
-    ax.set_ylim([1.5,2.8]);
+    #ax.set_xlim([9,12])
+    #ax.set_ylim([1.5,2.8]);
     set_locators(ax,0.5,0.1,0.2,0.02)
+    ax.autoscale(enable=True, axis='both', tight=None)
     ax.set_xlabel("log_10 $M_* (M_\odot)$");
-    ax.set_ylabel("$log_{10}$ ($\sigma_{e}$ [km/s])");
+    ax.set_ylabel("$log_{10}$ ($\sigma_{e}$ /[km/s])");
     ax.plot(galaxy_list.xmstel,np.log10(galaxy_list.getFJsigma()),label="FJ");
     #ax.plot(galaxy_list.xmstel,galaxy_list.getGallazi(),label="Gallazi");
     legend(fontsize=6,ncol=2);
@@ -221,3 +220,18 @@ if __name__ == "__main__":
     
     tight_layout();
     savefig("FJ.pdf")
+    close()
+
+    galaxy_list=Galaxy("LT",xms)
+    ax2=subplot(111)     #subplot(abc) creates axb grid and c is the index of the plot
+    #ax.set_xlim([9,12])
+    #ax.set_ylim([1.5,2.8]);
+    set_locators(ax,0.5,0.1,0.2,0.02)
+    ax2.autoscale(enable=True, axis='both', tight=None)
+    ax2.set_xlabel("log_10 $M_* (M_\odot)$");
+    ax2.set_ylabel("$log_{10}$ ($V_{2.2}$ /[km/s])");
+    ax2.plot(galaxy_list.xmstel,np.log10(galaxy_list.getTFvelocity()),label="TF");
+    #ax.plot(galaxy_list.xmstel,galaxy_list.getGallazi(),label="Gallazi");
+    legend(fontsize=6,ncol=2);
+    tight_layout();
+    savefig("TF.pdf")
