@@ -2,7 +2,22 @@
 
 # This code is meant to reproduce at least the late type relations presented in
 # Dutton et al. 2011
+#-------------------------------------------------------------------------------
+"""
+Make sure these files are there in the directory before compiling:
+SMHM_red.txt        SMHM relation for ET galaxies
+SMHM_blue.txt       SMHM relation for LT galaxies
+Vsq.txt             Velocity components for LT galaxy
 
+These files are created by this code:
+SMHM.txt            SMHM relation data
+VsqUpdate.txt       Square of Vhalo obtained from mandelbaum data
+
+Plots 
+FJ.pdf
+TF.pdf
+"""
+#-------------------------------------------------------------------------------
 #from scipy.special import iv,kv;
 import numpy as np;
 from math import *;
@@ -20,11 +35,12 @@ def interpolateSMHM(stelmass,SM,HM):
             return -1
     return halomass
 
+h=0.673
+
 class Galaxy(object):
     def __init__(self,galtype,xmstel):
         self.galtype=galtype;
         self.xmstel=xmstel;
-        #self.HaloMandelb=HaloMandelb
         
         # Equation 20, D11
         self.xmstel_bell=10.130+0.922*(xmstel-10.);
@@ -145,7 +161,8 @@ class Galaxy(object):
            return 0;
            
     def getSMHM(self,xmstel):
-
+        #gives SMHM relation from Mandelbaum 2015
+        #SM in Msolar, HM in h^-1 Msolar
         SMred=[]
         HMred=[]
         SMblue=[]
@@ -156,8 +173,6 @@ class Galaxy(object):
             for SM,HM in reader:
                SMred.append(float(SM))
                HMred.append(float(HM))
-               #print SMred 
-               #print HMred
        
         with open("SMHM_blue.txt",'r') as bluefile:
             next(bluefile) #to skip headings
@@ -165,12 +180,52 @@ class Galaxy(object):
             for SM,HM in reader:
                 SMblue.append(float(SM))
                 HMblue.append(float(HM))
-                #print SMblue
-                #print HMblue 
+
         if(self.galtype=="LT"):
             return interpolateSMHM(xmstel,SMblue,HMblue)
         elif(self.galtype=="ET"):
             return interpolateSMHM(xmstel,SMred,HMred) 
+
+    def getHM_critical_overdensity(self,xmstel):
+    #converts halo mass from mean overdensity to critical overdensity scale
+    #get mean overdensity halo mass from a given stellar mass
+        SMred=[]
+        HMred=[]
+        SMblue=[]
+        HMblue=[]
+        SM_hinv2Msolarred=[]
+        SM_hinv2Msolarblue=[]
+        with open("SMHM_red.txt",'r') as redfile:
+            next(redfile) #to skip headings
+            reader = csv.reader(redfile,delimiter='\t')
+            for SM,HM in reader:
+               SMred.append(float(SM))
+               HMred.append(float(HM))
+               SM_hinv2Msolarred.append(float(SM) - 2 * np.log10(h))
+
+        with open("SMHM_blue.txt",'r') as bluefile:
+            next(bluefile) #to skip headings
+            reader = csv.reader(bluefile,delimiter='\t')
+            for SM,HM in reader:
+                SMblue.append(float(SM))
+                HMblue.append(float(HM))
+                SM_hinv2Msolarblue.append(float(SM) - 2 * np.log10(h))
+
+        if(self.galtype=="LT"):
+            halom = interpolateSMHM(xmstel,SMblue,HMblue)
+        elif(self.galtype=="ET"):
+            halom = interpolateSMHM(xmstel,SMred,HMred) 
+
+        Halo_m = []
+        Halo_c = []
+        with open("Conversion_between_M200m_M200c.txt",'r') as file:
+            next(file)
+            reader = csv.reader(file,delimiter=' ')
+            for h_m,h_c in reader:
+                Halo_m.append(float(h_m))
+                Halo_c.append(float(h_c))
+
+        return interpolateSMHM(halom,Halo_m,Halo_c)
 #----------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------    
@@ -187,10 +242,13 @@ def set_locators(ax,xmaj,xmin,ymaj=0,ymin=0):
         ax.yaxis.set_minor_locator(MultipleLocator(ymin));
            
 if __name__ == "__main__":
+    
     xstelmass=np.arange(10.28,11.68,0.01);
     xstelmass2=np.arange(10.28,11.68,0.01)
     output=""
+    output+= "SMred" + "\t" + "HMred" + "\t" + "SMblue" + "\t" + "HMblue" + "\n"
     f=open("SMHM.txt",'w')
+    f.write(output)
     for i in range (0,141):
         galaxy_list1=Galaxy("ET",xstelmass[i]);
         galaxy_list2=Galaxy("LT",xstelmass[i]);
@@ -199,11 +257,12 @@ if __name__ == "__main__":
         output= str(xstelmass[i])+"\t"+str(galaxy_list1.getSMHM(xstelmass[i]))+"\t"+str(xstelmass2[i])+"\t"+str(galaxy_list2.getSMHM(xstelmass2[i]))+"\n"
         f.write(output)
     f.close()
-
-
-    xms=np.arange(9,12,0.1)
-    galaxy_list=Galaxy("ET",xms)
-    ax=subplot(111)     #subplot(abc) creates axb grid and c is the index of the plot
+    #writes SM and HM values for red and blue galaxies. SM in Msolar, HM in h^-1 Msolar
+    #-----------------------------------------------------------------------------------
+    
+    xms=np.arange(9,12,0.1)                         #an array of Stellar masses
+    galaxy_list=Galaxy("ET",xms)                    #a list of objects
+    ax=subplot(111)                                 #subplot(abc) creates axb grid and c is the index of the plot
     #ax.set_xlim([9,12])
     #ax.set_ylim([1.5,2.8]);
     set_locators(ax,0.5,0.1,0.2,0.02)
@@ -212,15 +271,58 @@ if __name__ == "__main__":
     ax.set_ylabel("$log_{10}$ ($\sigma_{e}$ /[km/s])");
     ax.plot(galaxy_list.xmstel,np.log10(galaxy_list.getFJsigma()),label="FJ");
     #ax.plot(galaxy_list.xmstel,galaxy_list.getGallazi(),label="Gallazi");
-    legend(fontsize=6,ncol=2);
-    
-    #ax=subplot(222)
-    #ax.autoscale(enable=True, axis='both', tight=None)
-    #ax.plot(YY_d,XX_d)    
-    
+    legend(fontsize=6,ncol=2);   
     tight_layout();
     savefig("FJ.pdf")
     close()
+    #----------------------------------------------------------------------------------------
+    
+    #testobj = Galaxy("ET",11)
+    #print testobj.getHM_critical_overdensity(11)
+
+    SM_TF=[]
+    HM_TF=[]
+    V200sq=[]
+    
+    with open("SMHM_blue.txt",'r') as file:
+        next(file)
+        rdr = csv.reader(file,delimiter='\t')
+        for SM,HM in rdr:
+            SM_TF.append(float(SM))         #in Msolar
+            HM_TF.append(float(HM))         #in h^-1 Msolar
+
+    G = 4.301 * 10**(-6)  # in km^2 s^-2 kpc Msolar^-1
+    
+    output2=""
+    
+    for i in range(0,141):
+        sm=10.24 + (i * 0.01)
+        #Eq 2, D10
+        log10_V200 = (log10(G) + interpolateSMHM(sm,SM_TF,HM_TF)) / 3       #requires some parameter addition to account for scale change of HM
+        output2+= str(sm) + "\t" + str(log10_V200) + "\n"
+        if((sm*100)%10 == 0 ):
+            V200sq.append ( 10 ** ((2 * log10_V200)))
+        print sm, 10**log10_V200, interpolateSMHM(sm,SM_TF,HM_TF)
+    ##print Vhalosq   #, Vgassq, Vdisksq, Vdisksq
+
+    #slicing for plotting purposes
+    Vhalosq = Vhalosq[13:]
+    Vbulgesq = Vbulgesq[13:]
+    Vdisksq = Vdisksq[13:]
+    Vgassq = Vgassq[13:]
+    V200sq= V200sq[:8]
+    Vsumsq = []
+    
+    plotmass = np.arange(10.3,11.1,0.1)
+    
+    for i in range (0,8):
+        Vsumsq.append(np.log10(Vbulgesq[i]+Vdisksq[i]+Vgassq[i]+V200sq[i]))#+Vhalosq[i]))
+    #print   (Vsumsq)
+     
+    
+    for i in range (0,8):
+        Vsumsq[i] = Vsumsq[i] - 2.0                #transposing just to compare slopes
+        
 
     galaxy_list=Galaxy("LT",xms)
     ax2=subplot(111)     #subplot(abc) creates axb grid and c is the index of the plot
@@ -231,7 +333,10 @@ if __name__ == "__main__":
     ax2.set_xlabel("log_10 $M_* (M_\odot)$");
     ax2.set_ylabel("$log_{10}$ ($V_{2.2}$ /[km/s])");
     ax2.plot(galaxy_list.xmstel,np.log10(galaxy_list.getTFvelocity()),label="TF");
+    ax2.plot(plotmass,Vsumsq,label="model");
+    ax2.plot(sm,log10_V200,label="V200")
     #ax.plot(galaxy_list.xmstel,galaxy_list.getGallazi(),label="Gallazi");
     legend(fontsize=6,ncol=2);
     tight_layout();
     savefig("TF.pdf")
+    
