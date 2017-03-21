@@ -160,33 +160,8 @@ class Galaxy(object):
        else:
            return 0;
            
-    def getSMHM(self,xmstel):
-        #gives SMHM relation from Mandelbaum 2015
-        #SM in Msolar, HM in h^-1 Msolar
-        SMred=[]
-        HMred=[]
-        SMblue=[]
-        HMblue=[]
-        with open("SMHM_red.txt",'r') as redfile:
-            next(redfile) #to skip headings
-            reader = csv.reader(redfile,delimiter='\t')
-            for SM,HM in reader:
-               SMred.append(float(SM))
-               HMred.append(float(HM))
-       
-        with open("SMHM_blue.txt",'r') as bluefile:
-            next(bluefile) #to skip headings
-            reader = csv.reader(bluefile,delimiter='\t')
-            for SM,HM in reader:
-                SMblue.append(float(SM))
-                HMblue.append(float(HM))
-
-        if(self.galtype=="LT"):
-            return interpolateSMHM(xmstel,SMblue,HMblue)
-        elif(self.galtype=="ET"):
-            return interpolateSMHM(xmstel,SMred,HMred) 
-
     def getHM_critical_overdensity(self,xmstel):
+    #takes xmstel in h^-2 Msolar units and outputs in h^-1 Msolar units
     #converts halo mass from mean overdensity to critical overdensity scale
     #get mean overdensity halo mass from a given stellar mass
         SMred=[]
@@ -199,22 +174,24 @@ class Galaxy(object):
             next(redfile) #to skip headings
             reader = csv.reader(redfile,delimiter='\t')
             for SM,HM in reader:
-               SMred.append(float(SM))
-               HMred.append(float(HM))
-               SM_hinv2Msolarred.append(float(SM) - 2 * np.log10(h))
+               SMred.append(float(SM))      #in Msolar
+               HMred.append(float(HM))      #in h^-1 Msolar
+               SM_hinv2Msolarred.append(float(SM) - 2 * log10(h))       #in h^-2 Msolar
 
         with open("SMHM_blue.txt",'r') as bluefile:
             next(bluefile) #to skip headings
             reader = csv.reader(bluefile,delimiter='\t')
             for SM,HM in reader:
-                SMblue.append(float(SM))
-                HMblue.append(float(HM))
-                SM_hinv2Msolarblue.append(float(SM) - 2 * np.log10(h))
+                SMblue.append(float(SM))    #in Msolar
+                HMblue.append(float(HM))    #in h^-1 Msolar
+                SM_hinv2Msolarblue.append(float(SM) - 2 * log10(h))     #in h^-2 Msolar
 
         if(self.galtype=="LT"):
-            halom = interpolateSMHM(xmstel,SMblue,HMblue)
+            SM=list(SM_hinv2Msolarblue)
+            halom = interpolateSMHM(xmstel,SM_hinv2Msolarblue,HMblue)   #gives HM(h^-1 Msol) for xmstel(h^-2 Msol)
         elif(self.galtype=="ET"):
-            halom = interpolateSMHM(xmstel,SMred,HMred) 
+            SM=list(SM_hinv2Msolarred)
+            halom = interpolateSMHM(xmstel,SM_hinv2Msolarred,HMred) 
 
         Halo_m = []
         Halo_c = []
@@ -225,7 +202,7 @@ class Galaxy(object):
                 Halo_m.append(float(h_m))
                 Halo_c.append(float(h_c))
 
-        return interpolateSMHM(halom,Halo_m,Halo_c)
+        return interpolateSMHM(halom,Halo_m,Halo_c)                     #returns HM as critical overdensity
 #----------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------    
@@ -243,21 +220,21 @@ def set_locators(ax,xmaj,xmin,ymaj=0,ymin=0):
            
 if __name__ == "__main__":
     
-    xstelmass=np.arange(10.28,11.68,0.01);
-    xstelmass2=np.arange(10.28,11.68,0.01)
+    xstelmass=np.arange(10.63,12.02,0.01);
+    xstelmass2=np.arange(10.63,12.02,0.01)
     output=""
-    output+= "SMred" + "\t" + "HMred" + "\t" + "SMblue" + "\t" + "HMblue" + "\n"
+    output+= "SMred(h^-2Ms)" + "\t" + "HMred(h^-1Ms)" + "\t" + "SMblue(h^-2Ms)" + "\t" + "HMblue(h^-1Ms)" + "Halo masses are w.r.t critical density of universe" +"\n"
     f=open("SMHM.txt",'w')
     f.write(output)
-    for i in range (0,141):
+    for i in range (0,139):
         galaxy_list1=Galaxy("ET",xstelmass[i]);
-        galaxy_list2=Galaxy("LT",xstelmass[i]);
+        galaxy_list2=Galaxy("LT",xstelmass2[i]);
         #sigma_list=galaxy_list.getFJsigma();
-        print xstelmass2[i],"\t",galaxy_list2.getSMHM(xstelmass[i])
-        output= str(xstelmass[i])+"\t"+str(galaxy_list1.getSMHM(xstelmass[i]))+"\t"+str(xstelmass2[i])+"\t"+str(galaxy_list2.getSMHM(xstelmass2[i]))+"\n"
+        #print xstelmass2[i],"\t",galaxy_list2.getHM_critical_overdensity(xstelmass2[i])
+        output= str(xstelmass[i])+"\t"+str(galaxy_list1.getHM_critical_overdensity(xstelmass[i]))+"\t"+str(xstelmass2[i])+"\t"+str(galaxy_list2.getHM_critical_overdensity(xstelmass2[i]))+"\n"
         f.write(output)
     f.close()
-    #writes SM and HM values for red and blue galaxies. SM in Msolar, HM in h^-1 Msolar
+    #writes SM and HM values for red and blue galaxies. SM in h^-2 Msolar, HM in h^-1 Msolar
     #-----------------------------------------------------------------------------------
     
     xms=np.arange(9,12,0.1)                         #an array of Stellar masses
@@ -288,17 +265,28 @@ if __name__ == "__main__":
         next(file)
         rdr = csv.reader(file,delimiter='\t')
         for SM,HM in rdr:
-            SM_TF.append(float(SM))         #in Msolar
-            HM_TF.append(float(HM))         #in h^-1 Msolar
+            SM_TF.append(float(SM) - 2 *log10(h))         #in h^-2 Msolar
+            Halo_m=[]
+            Halo_c=[]
+            with open("Conversion_between_M200m_M200c.txt",'r') as file2:
+                next(file2)
+                reader = csv.reader(file2,delimiter=' ')
+                for h_m,h_c in reader:
+                    Halo_m.append(float(h_m))
+                    Halo_c.append(float(h_c))
+            HM_TF.append(interpolateSMHM(float(HM),Halo_m,Halo_c))         #in h^-1 Msolar critical overdensity
+
+    #print SM_TF
+    #print HM_TF
 
     G = 4.301 * 10**(-6)  # in km^2 s^-2 kpc Msolar^-1
     
     output2=""
     
-    for i in range(0,141):
-        sm=10.24 + (i * 0.01)
+    for i in range(0,139):
+        sm=10.59 + (i * 0.01)
         #Eq 2, D10
-        log10_V200 = (log10(G) + interpolateSMHM(sm,SM_TF,HM_TF)) / 3       #requires some parameter addition to account for scale change of HM
+        log10_V200 = (log10(G) + interpolateSMHM(sm,SM_TF,HM_TF)) / 3       #HM returned is w.r.t critical overdensity 
         output2+= str(sm) + "\t" + str(log10_V200) + "\n"
         if((sm*100)%10 == 0 ):
             V200sq.append ( 10 ** ((2 * log10_V200)))
