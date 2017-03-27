@@ -25,7 +25,7 @@ from pylab import *;
 import csv
 from matplotlib.ticker import MultipleLocator
 
-def interpolateSMHM(stelmass,SM,HM):
+def interpolate(stelmass,SM,HM):
     size = len(SM)
     for i in range (0,size):
         if((stelmass)>=SM[i] and (stelmass)<SM[i+1]):
@@ -188,10 +188,10 @@ class Galaxy(object):
 
         if(self.galtype=="LT"):
             SM=list(SM_hinv2Msolarblue)
-            halom = interpolateSMHM(xmstel,SM_hinv2Msolarblue,HMblue)   #gives HM(h^-1 Msol) for xmstel(h^-2 Msol)
+            halom = interpolate(xmstel,SM_hinv2Msolarblue,HMblue)   #gives HM(h^-1 Msol) for xmstel(h^-2 Msol)
         elif(self.galtype=="ET"):
             SM=list(SM_hinv2Msolarred)
-            halom = interpolateSMHM(xmstel,SM_hinv2Msolarred,HMred) 
+            halom = interpolate(xmstel,SM_hinv2Msolarred,HMred) 
 
         Halo_m = []
         Halo_c = []
@@ -202,7 +202,7 @@ class Galaxy(object):
                 Halo_m.append(float(h_m))
                 Halo_c.append(float(h_c))
 
-        return interpolateSMHM(halom,Halo_m,Halo_c)                     #returns HM as critical overdensity
+        return interpolate(halom,Halo_m,Halo_c)                     #returns HM as critical overdensity
 #----------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------    
@@ -274,43 +274,67 @@ if __name__ == "__main__":
                 for h_m,h_c in reader:
                     Halo_m.append(float(h_m))
                     Halo_c.append(float(h_c))
-            HM_TF.append(interpolateSMHM(float(HM),Halo_m,Halo_c))         #in h^-1 Msolar critical overdensity
+            HM_TF.append(interpolate(float(HM),Halo_m,Halo_c))         #in h^-1 Msolar critical overdensity
 
     #print SM_TF
     #print HM_TF
 
     G = 4.301 * 10**(-6)  # in km^2 s^-2 kpc Msolar^-1
     
-    output2=""
+    output2="SM(hinv2 Msol)"+"\t"+"V200^2"+"\t"+"V200"+"\n"
     
     for i in range(0,139):
-        sm=10.59 + (i * 0.01)
+        sm=10.59 + (i * 0.01)           #sm in Hinv2 Msolar
         #Eq 2, D10
-        log10_V200 = (log10(G) + interpolateSMHM(sm,SM_TF,HM_TF)) / 3       #HM returned is w.r.t critical overdensity 
-        output2+= str(sm) + "\t" + str(log10_V200) + "\n"
-        if((sm*100)%10 == 0 ):
-            V200sq.append ( 10 ** ((2 * log10_V200)))
-        print sm, 10**log10_V200, interpolateSMHM(sm,SM_TF,HM_TF)
-    ##print Vhalosq   #, Vgassq, Vdisksq, Vdisksq
+        log10_V200 = (log10(G) + interpolate(sm,SM_TF,HM_TF)) / 3       #HM returned is w.r.t critical overdensity 
+        V200sq.append ( 10 ** ((2 * log10_V200)))
+        print sm, V200sq[i], sqrt(V200sq[i]),log10_V200
+        output2+= str(sm) + "\t" + str(V200sq[i]) + "\t" + str(sqrt(V200sq[i])) + "\t" + str(log10_V200) + "\n"
+        #print sm, 10**(2*log10_V200), interpolate(sm,SM_TF,HM_TF)
+    #print output2
+
+    print len(V200sq)    
+    f=open("V200sqUpdate.txt",'w')
+    f.write(output2)
+    f.close()
+
+    Vhalosq=[] 
+    Vbulgesq=[]
+    Vdisksq=[]
+    Vgassq=[]
+
+    with open("Vsq.txt",'r') as file:
+        next(file)
+        reader = csv.reader(file,delimiter='\t')
+        for xm,vbsq,vdsq,vgsq,vhsq in reader:
+            Vhalosq.append(float(vhsq))
+            Vdisksq.append(float(vdsq))
+            Vbulgesq.append(float(vbsq))
+            Vgassq.append(float(vgsq))
+
+    #print Vgassq
+
 
     #slicing for plotting purposes
-    Vhalosq = Vhalosq[13:]
-    Vbulgesq = Vbulgesq[13:]
-    Vdisksq = Vdisksq[13:]
-    Vgassq = Vgassq[13:]
-    V200sq= V200sq[:8]
+    Vhalosq = Vhalosq[16:]
+    Vbulgesq = Vbulgesq[16:]
+    Vdisksq = Vdisksq[16:]
+    Vgassq = Vgassq[16:]
+    V200sq= V200sq[1:43:10]
     Vsumsq = []
-    
-    plotmass = np.arange(10.3,11.1,0.1)
-    
-    for i in range (0,8):
-        Vsumsq.append(np.log10(Vbulgesq[i]+Vdisksq[i]+Vgassq[i]+V200sq[i]))#+Vhalosq[i]))
-    #print   (Vsumsq)
-     
-    
-    for i in range (0,8):
-        Vsumsq[i] = Vsumsq[i] - 2.0                #transposing just to compare slopes
-        
+    Vsumsq2 =[]
+    plotmass = np.arange(10.6,11.0,0.1)
+    print V200sq
+    print Vgassq
+    print Vbulgesq
+    print Vdisksq
+    print Vhalosq
+
+    for i in range (0,5):
+        Vsumsq.append(0.5*np.log10(Vbulgesq[i]+Vdisksq[i]+Vgassq[i]+Vhalosq[i]))
+        Vsumsq2.append(0.5*np.log10(Vbulgesq[i]+Vdisksq[i]+Vgassq[i]+V200sq[i]))
+    print   (Vsumsq)
+           
 
     galaxy_list=Galaxy("LT",xms)
     ax2=subplot(111)     #subplot(abc) creates axb grid and c is the index of the plot
@@ -322,7 +346,8 @@ if __name__ == "__main__":
     ax2.set_ylabel("$log_{10}$ ($V_{2.2}$ /[km/s])");
     ax2.plot(galaxy_list.xmstel,np.log10(galaxy_list.getTFvelocity()),label="TF");
     ax2.plot(plotmass,Vsumsq,label="model");
-    ax2.plot(sm,log10_V200,label="V200")
+    ax2.plot(plotmass,Vsumsq2,label="model with V200")
+    #ax2.plot(sm,log10_V200,label="V200")
     #ax.plot(galaxy_list.xmstel,galaxy_list.getGallazi(),label="Gallazi");
     legend(fontsize=6,ncol=2);
     tight_layout();
