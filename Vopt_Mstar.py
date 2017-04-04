@@ -176,7 +176,7 @@ class Galaxy(object):
             for SM,HM in reader:
                SMred.append(float(SM))      #in Msolar
                HMred.append(float(HM))      #in h^-1 Msolar
-               SM_hinv2Msolarred.append(float(SM) - 2 * log10(h))       #in h^-2 Msolar
+               SM_hinv2Msolarred.append(float(SM) + 2 * log10(h))       #in h^-2 Msolar
 
         with open("SMHM_blue.txt",'r') as bluefile:
             next(bluefile) #to skip headings
@@ -184,7 +184,7 @@ class Galaxy(object):
             for SM,HM in reader:
                 SMblue.append(float(SM))    #in Msolar
                 HMblue.append(float(HM))    #in h^-1 Msolar
-                SM_hinv2Msolarblue.append(float(SM) - 2 * log10(h))     #in h^-2 Msolar
+                SM_hinv2Msolarblue.append(float(SM) + 2 * log10(h))     #in h^-2 Msolar
 
         if(self.galtype=="LT"):
             SM=list(SM_hinv2Msolarblue)
@@ -220,8 +220,8 @@ def set_locators(ax,xmaj,xmin,ymaj=0,ymin=0):
            
 if __name__ == "__main__":
     
-    xstelmass=np.arange(10.63,12.02,0.01);
-    xstelmass2=np.arange(10.63,12.02,0.01)
+    xstelmass=np.arange(9.94,11.33,0.01);
+    xstelmass2=np.arange(9.94,11.33,0.01)
     output=""
     output+= "SMred(h^-2Ms)" + "\t" + "HMred(h^-1Ms)" + "\t" + "SMblue(h^-2Ms)" + "\t" + "HMblue(h^-1Ms)" + "Halo masses are w.r.t critical density of universe" +"\n"
     f=open("SMHM.txt",'w')
@@ -265,7 +265,7 @@ if __name__ == "__main__":
         next(file)
         rdr = csv.reader(file,delimiter='\t')
         for SM,HM in rdr:
-            SM_TF.append(float(SM) - 2 *log10(h))         #in h^-2 Msolar
+            SM_TF.append(float(SM) + 2 *log10(h))         #in h^-2 Msolar
             Halo_m=[]
             Halo_c=[]
             with open("Conversion_between_M200m_M200c.txt",'r') as file2:
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     output2="SM(hinv2 Msol)"+"\t"+"V200^2"+"\t"+"V200"+"\n"
     
     for i in range(0,139):
-        sm=10.59 + (i * 0.01)           #sm in Hinv2 Msolar
+        sm=9.94 + (i * 0.01)           #sm in Hinv2 Msolar
         #Eq 2, D10
         log10_V200 = (log10(G) + interpolate(sm,SM_TF,HM_TF)) / 3       #HM returned is w.r.t critical overdensity 
         V200sq.append ( 10 ** ((2 * log10_V200)))
@@ -314,23 +314,25 @@ if __name__ == "__main__":
 
     #print Vgassq
 
-
+    Vhalosq2=list(Vhalosq)
     #slicing for plotting purposes
-    Vhalosq = Vhalosq[16:]
-    Vbulgesq = Vbulgesq[16:]
-    Vdisksq = Vdisksq[16:]
-    Vgassq = Vgassq[16:]
-    V200sq= V200sq[1:43:10]
+    Vhalosq = Vhalosq[10:]
+    Vbulgesq = Vbulgesq[10:]
+    Vdisksq = Vdisksq[10:]
+    Vgassq = Vgassq[10:]
+    V200sq= V200sq[6:108:10]
     Vsumsq = []
     Vsumsq2 =[]
-    plotmass = np.arange(10.6,11.0,0.1)
+    plotmass = np.arange(10.0,11.1,0.1)
     print V200sq
     print Vgassq
     print Vbulgesq
     print Vdisksq
     print Vhalosq
+    print plotmass
 
-    for i in range (0,5):
+
+    for i in range (0,11):
         Vsumsq.append(0.5*np.log10(Vbulgesq[i]+Vdisksq[i]+Vgassq[i]+Vhalosq[i]))
         Vsumsq2.append(0.5*np.log10(Vbulgesq[i]+Vdisksq[i]+Vgassq[i]+V200sq[i]))
     print   (Vsumsq)
@@ -340,16 +342,44 @@ if __name__ == "__main__":
     ax2=subplot(111)     #subplot(abc) creates axb grid and c is the index of the plot
     #ax.set_xlim([9,12])
     #ax.set_ylim([1.5,2.8]);
-    set_locators(ax,0.5,0.1,0.2,0.02)
+    set_locators(ax2,0.5,0.1,0.2,0.02)
     ax2.autoscale(enable=True, axis='both', tight=None)
-    ax2.set_xlabel("log_10 $M_* (M_\odot)$");
+    ax2.set_xlabel("$log_{10}$ ($M_* (M_\odot)$");
     ax2.set_ylabel("$log_{10}$ ($V_{2.2}$ /[km/s])");
     ax2.plot(galaxy_list.xmstel,np.log10(galaxy_list.getTFvelocity()),label="TF");
-    ax2.plot(plotmass,Vsumsq,label="model");
-    ax2.plot(plotmass,Vsumsq2,label="model with V200")
+    ax2.plot(plotmass,Vsumsq,label="model Dutton");
+    ax2.plot(plotmass,Vsumsq2,label="model Mandelbaum")
     #ax2.plot(sm,log10_V200,label="V200")
     #ax.plot(galaxy_list.xmstel,galaxy_list.getGallazi(),label="Gallazi");
     legend(fontsize=6,ncol=2);
     tight_layout();
     savefig("TF.pdf")
-    
+    close()
+
+
+    #VelDutton=[]
+    HMdutton=[]
+    #print len(sm)
+    for i in range (0,len(Vhalosq2)):
+        #VelDutton.append(sqrt(Vhalosq2[i]))
+        HMdutton.append((1.5*log10(Vhalosq2[i])) - log10(G))
+
+    print len(HMdutton)
+    sm=np.arange(9,11.1,0.1)
+    print len(sm)
+    ratio = [float(ai/bi) for ai, bi in zip(sm,HMdutton)]
+    ratio2 = [float(ai/bi) for ai, bi in zip(SM_TF,HM_TF)]
+
+
+    ax3=subplot(111)
+    set_locators(ax3,0.5,0.1,0.01,0.05)
+    ax3.autoscale(enable=True, axis='both', tight=None)
+    ax3.set_xlabel("$log_{10}$ $M_* (h^-2 M_\odot)$") #does TF relation also need to be changed from Msun to hinv2 Msun
+    ax3.set_ylabel("$log_{10}$($HM  /[$h^{-1} M_\odot])")
+    ax3.plot(sm,ratio,label="Dutton")
+    ax3.plot(SM_TF,ratio2,label="Mandelbaum")
+    legend(fontsize=6,ncol=1)
+    tight_layout();
+    savefig("SMHM.pdf")
+    close()
+
